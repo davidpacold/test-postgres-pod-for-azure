@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+data:
+  host: "Yourdb.database.azure.com"
+  port: "5432"
+  database: "db name"
+  username: "your username"
