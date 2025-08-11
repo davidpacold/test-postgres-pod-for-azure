@@ -5,5 +5,5 @@ metadata:
 data:
   host: "<YOUR-POSTGRES-SERVER>.database.azure.com"
   port: "5432"
-  database: "db name"
-  username: "your username"
+  database: "<YOUR TEST DATABASE NAME>"
+  username: "<YOUR-USERNAME>"
