@@ -294,6 +294,58 @@ The image includes:
 - `curl` - For HTTP requests  
 - Python packages: `psycopg2-binary`, `requests`, `urllib3`
 
+## Container Image Versioning
+
+The project uses automated Docker image builds via GitHub Actions with intelligent version tagging:
+
+### **Automatic Image Tags:**
+
+**Latest Development:**
+- `ghcr.io/davidpacold/connectivity-tester:latest` - Always the newest version from main branch
+
+**Version Releases:**
+When you create a git tag like `v1.2.3`, multiple image tags are automatically created:
+- `ghcr.io/davidpacold/connectivity-tester:1.2.3` - Exact version
+- `ghcr.io/davidpacold/connectivity-tester:1.2` - Latest patch in 1.2.x series  
+- `ghcr.io/davidpacold/connectivity-tester:1` - Latest minor in 1.x series
+
+### **Creating Version Releases:**
+
+```bash
+# Create and push a version tag
+git tag v1.0.0
+git push origin v1.0.0
+
+# This triggers automatic build of all version tags
+# Available immediately after build completes
+```
+
+### **Using Specific Versions:**
+
+**For development/testing (default):**
+```yaml
+image: ghcr.io/davidpacold/connectivity-tester:latest
+imagePullPolicy: Always
+```
+
+**For production deployments:**
+```yaml
+image: ghcr.io/davidpacold/connectivity-tester:1.0.0  # Pin to exact version
+imagePullPolicy: IfNotPresent
+```
+
+### **Version History:**
+All built versions remain available indefinitely in GitHub Container Registry, allowing:
+- **Rollbacks** to previous versions if issues arise
+- **Testing** with specific versions
+- **Staging** environments with pinned versions
+
+### **Automatic Builds:**
+Images are automatically built when you:
+- Push changes to `main` branch (creates new `latest`)
+- Push version tags like `v1.0.0` (creates version-specific tags)
+- Modify Docker-related files (`Dockerfile`, `requirements.txt`, `test_connectivity.py`)
+
 ## Files
 
 - `postgres-test-pod.yaml` - Original test pod with PostgreSQL client only
