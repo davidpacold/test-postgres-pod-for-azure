@@ -6,6 +6,7 @@ This test pod helps validate connectivity between a pod in AKS and an Azure Flex
 
 - kubectl configured to connect to your AKS cluster
 - Azure Flexible PostgreSQL server details
+- Docker installed and running (for building custom test image)
 
 ## Setup
 
@@ -242,6 +243,56 @@ This will:
 - Test read/write permissions
 - Check storage capacity
 - Create a persistence marker file for validation
+
+## Docker Image Build Requirements
+
+The connectivity tester uses a custom Docker image that must be built before deployment. The build scripts handle this automatically, but you should be aware of the requirements:
+
+### **System Requirements:**
+- **Docker installed and running** - Docker Desktop (Windows/Mac) or Docker Engine (Linux)
+- **Internet access** - To download base image and dependencies
+- **Sufficient disk space** - ~200MB for image and build cache
+- **Docker permissions** - User must be able to run Docker commands
+
+### **Required Files:**
+These files must be present in the project directory for the build to succeed:
+- `Dockerfile` - Container definition
+- `requirements.txt` - Python dependencies
+- `test_connectivity.py` - Main connectivity test script
+
+### **Architecture Considerations:**
+
+**For local clusters (kind/minikube):**
+```bash
+# Build and load into cluster
+./build-image.sh
+kind load docker-image connectivity-tester:latest
+```
+
+**For cloud clusters (AKS/EKS/GKE):**
+```bash
+# Build for correct architecture (if on Apple Silicon)
+docker build --platform linux/amd64 -t connectivity-tester:latest .
+
+# Push to container registry
+docker tag connectivity-tester:latest your-registry/connectivity-tester:latest
+docker push your-registry/connectivity-tester:latest
+
+# Update pod YAML to use your registry image
+```
+
+### **Corporate Network Issues:**
+If you're behind a corporate firewall:
+- Configure Docker to use corporate proxy settings
+- Use internal container registry instead of Docker Hub
+- Contact IT about accessing python package repositories (PyPI)
+
+### **Dependencies Installed:**
+The image includes:
+- `python:3.11-slim` base image (Debian-based)
+- `postgresql-client` - For PostgreSQL connectivity
+- `curl` - For HTTP requests  
+- Python packages: `psycopg2-binary`, `requests`, `urllib3`
 
 ## Files
 

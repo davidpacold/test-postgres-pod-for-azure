@@ -7,8 +7,8 @@ metadata:
 spec:
   containers:
   - name: connectivity-tester
-    image: connectivity-tester:latest
-    imagePullPolicy: IfNotPresent
+    image: ghcr.io/davidpacold/connectivity-tester:latest
+    imagePullPolicy: Always
     env:
     # PostgreSQL Configuration
     - name: PGHOST
