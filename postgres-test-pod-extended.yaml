@@ -117,6 +117,44 @@ spec:
           key: openai-compatible-model
           optional: true
     
+    # Custom Hostname Test Configuration (Optional)
+    - name: CUSTOM_HOST_1
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: custom-host-1
+          optional: true
+    - name: CUSTOM_HOST_1_NAME
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: custom-host-1-name
+          optional: true
+    - name: CUSTOM_HOST_2
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: custom-host-2
+          optional: true
+    - name: CUSTOM_HOST_2_NAME
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: custom-host-2-name
+          optional: true
+    - name: CUSTOM_HOST_3
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: custom-host-3
+          optional: true
+    - name: CUSTOM_HOST_3_NAME
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: custom-host-3-name
+          optional: true
+    
     # PVC Test Configuration (Optional)
     - name: TEST_PVC
       value: "false"  # Set to "true" to enable PVC testing

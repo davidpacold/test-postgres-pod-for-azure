@@ -156,6 +156,9 @@ The test pod supports optional connectivity tests for Azure services:
      - Set `openai-compatible-endpoint` (e.g., https://api.openai.com, https://api.together.xyz/v1)
      - Set `openai-compatible-api-key` (optional for some self-hosted endpoints)
      - Set `openai-compatible-model` (e.g., gpt-3.5-turbo, meta-llama/Llama-2-7b-chat-hf)
+   - For Custom Hostname Testing:
+     - Set `custom-host-1` through `custom-host-10` (e.g., internal-api.company.com, https://api.example.com)
+     - Set `custom-host-1-name` through `custom-host-10-name` for display names (e.g., "Internal API", "My Service")
 
 2. **Deploy with automated tests** (includes Azure service tests if configured):
    ```bash
@@ -168,6 +171,7 @@ The automated tests will:
 - Test Azure Document Intelligence if configured (optional)
 - Test Ollama if configured (optional)
 - Test OpenAI-compatible endpoints if configured (optional)
+- Test custom hostnames if configured (optional)
 - Test Persistent Volume Claim if enabled with --enable-pvc (optional)
 - Test connectivity to external services (optional):
   - Office 365 (login.microsoftonline.com)
@@ -179,6 +183,32 @@ The automated tests will:
   - Amazon S3 (aws.amazon.com/s3)
   - Confluence (atlassian.com/software/confluence)
 - Continue running for manual testing after automated tests complete
+
+### Custom Hostname Testing:
+
+You can configure up to 10 custom hostnames to test connectivity to internal APIs, custom services, or specific external endpoints:
+
+**Examples:**
+```yaml
+# In azure-services-secret.yaml
+custom-host-1: "internal-api.company.com"
+custom-host-1-name: "Internal API"
+custom-host-2: "https://api.example.com/health"
+custom-host-2-name: "External API Health Check"
+custom-host-3: "my-service.internal:8080"
+custom-host-3-name: "Internal Microservice"
+```
+
+**Features:**
+- Supports hostnames, URLs with full paths, and custom ports
+- Automatically tries HTTPS first, then HTTP if HTTPS fails
+- Handles SSL errors gracefully
+- Provides detailed status information for each host
+
+**To disable custom hostname tests:**
+```bash
+kubectl set env pod/postgres-test-pod TEST_CUSTOM_HOSTNAMES=false -n <namespace>
+```
 
 ### Disabling External Service Tests:
 

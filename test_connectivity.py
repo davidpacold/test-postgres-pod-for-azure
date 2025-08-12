@@ -274,6 +274,89 @@ def test_openai_compatible():
         log(f"OpenAI-compatible connection error: {str(e)}", "ERROR")
         return False
 
+def test_custom_hostnames():
+    log("Testing connectivity to custom hostnames...")
+    
+    # Check if custom hostname tests are enabled
+    test_enabled = os.environ.get('TEST_CUSTOM_HOSTNAMES', 'true').lower() == 'true'
+    if not test_enabled:
+        log("Custom hostname tests skipped - disabled (set TEST_CUSTOM_HOSTNAMES=true to enable)", "WARN")
+        return None
+    
+    # Get custom hostnames from environment variables
+    custom_hosts = {}
+    for i in range(1, 11):  # Support up to 10 custom hosts
+        host_key = f'CUSTOM_HOST_{i}'
+        name_key = f'CUSTOM_HOST_{i}_NAME'
+        
+        host_url = os.environ.get(host_key, '').strip()
+        host_name = os.environ.get(name_key, f'Custom Host {i}').strip()
+        
+        if host_url:
+            custom_hosts[host_name] = host_url
+    
+    if not custom_hosts:
+        log("No custom hostnames configured - skipping (configure CUSTOM_HOST_1, CUSTOM_HOST_2, etc.)", "WARN")
+        return None
+    
+    results = {}
+    
+    for service_name, url in custom_hosts.items():
+        try:
+            log(f"Testing {service_name} connectivity to {url}...")
+            
+            # Add protocol if missing
+            if not url.startswith(('http://', 'https://')):
+                # Try HTTPS first, then HTTP if it fails
+                test_urls = [f'https://{url}', f'http://{url}']
+            else:
+                test_urls = [url]
+            
+            success = False
+            final_status = None
+            
+            for test_url in test_urls:
+                try:
+                    response = requests.get(test_url, timeout=10, allow_redirects=True)
+                    final_status = response.status_code
+                    
+                    # Consider 2xx and 3xx status codes as successful
+                    if response.status_code < 400:
+                        log(f"{service_name}: REACHABLE (Status: {response.status_code}, URL: {test_url})")
+                        results[service_name] = True
+                        success = True
+                        break
+                    else:
+                        log(f"{service_name}: HTTP {response.status_code} for {test_url}")
+                        
+                except requests.exceptions.SSLError:
+                    log(f"{service_name}: SSL Error for {test_url}, trying HTTP if available")
+                    continue
+                except requests.exceptions.ConnectionError:
+                    log(f"{service_name}: Connection Error for {test_url}")
+                    continue
+                except Exception as e:
+                    log(f"{service_name}: Error for {test_url} - {str(e)}")
+                    continue
+            
+            if not success:
+                if final_status:
+                    log(f"{service_name}: UNREACHABLE (Final Status: {final_status})", "WARN")
+                else:
+                    log(f"{service_name}: UNREACHABLE (Connection failed)", "WARN")
+                results[service_name] = False
+                
+        except Exception as e:
+            log(f"{service_name}: ERROR - {str(e)}", "WARN")
+            results[service_name] = False
+    
+    # Summary of custom hostname tests
+    reachable = sum(1 for v in results.values() if v)
+    total = len(results)
+    log(f"Custom hostnames summary: {reachable}/{total} hosts reachable")
+    
+    return results
+
 def test_external_services():
     log("Testing connectivity to external services...")
     
@@ -366,6 +449,12 @@ def main():
         results['Persistent Volume Claim'] = result
         log("-" * 60)
     
+    # Test Custom Hostnames (optional)
+    custom_results = test_custom_hostnames()
+    if custom_results is not None:
+        results['Custom Hostnames'] = custom_results
+        log("-" * 60)
+    
     # Test External Services (optional)
     external_results = test_external_services()
     if external_results is not None:
@@ -376,8 +465,8 @@ def main():
     log("=" * 60)
     log("TEST SUMMARY:")
     for service, status in results.items():
-        if service == 'External Services':
-            # Handle external services separately
+        if service in ['Custom Hostnames', 'External Services']:
+            # Handle service groups separately
             reachable = sum(1 for v in status.values() if v)
             total = len(status)
             status_text = f"{reachable}/{total} REACHABLE"
