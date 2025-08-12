@@ -194,7 +194,7 @@ The automated tests will:
   - Dropbox (dropbox.com)
   - ServiceNow (servicenow.com)
   - Amazon S3 (aws.amazon.com/s3)
-  - Confluence (atlassian.com/software/confluence)
+  - Atlassian (id.atlassian.com/login)
 - Continue running for manual testing after automated tests complete
 
 ### Custom Hostname Testing:

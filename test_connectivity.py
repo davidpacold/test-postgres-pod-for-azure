@@ -521,7 +521,7 @@ def test_external_services():
         'Dropbox': 'https://www.dropbox.com',
         'ServiceNow': 'https://www.servicenow.com',
         'Amazon S3': 'https://aws.amazon.com/s3/',
-        'Confluence': 'https://www.atlassian.com/software/confluence'
+        'Atlassian': 'https://id.atlassian.com/login'
     }
     
     results = {}
