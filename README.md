@@ -27,38 +27,66 @@ This test pod helps validate connectivity between a pod in AKS and an Azure Flex
 
 #### Linux/macOS/WSL:
 ```bash
+# Show help
+./deploy-and-test.sh --help
+
+# Basic deployment (automated tests)
+./deploy-and-test.sh
+
+# Deploy with manual connectivity tests
+./deploy-and-test.sh --manual-tests --server <YOUR-POSTGRES-SERVER>
+
 # Deploy to specific namespace
-./deploy-and-test.sh <YOUR-POSTGRES-SERVER> <namespace>
+./deploy-and-test.sh --namespace my-namespace
 
-# Deploy to default namespace
-./deploy-and-test.sh <YOUR-POSTGRES-SERVER>
+# Deploy with PVC testing enabled
+./deploy-and-test.sh --enable-pvc
 
-# Example
-./deploy-and-test.sh airia-postgresql-mvp my-namespace
+# Example with all options
+./deploy-and-test.sh --namespace prod --server airia-postgresql-mvp --manual-tests --enable-pvc
 ```
 
 #### Windows (Command Prompt/PowerShell):
 ```cmd
+# Show help
+deploy-and-test.bat --help
+
+# Basic deployment (automated tests)
+deploy-and-test.bat
+
+# Deploy with manual connectivity tests
+deploy-and-test.bat --manual-tests --server <YOUR-POSTGRES-SERVER>
+
 # Deploy to specific namespace
-deploy-and-test.bat <YOUR-POSTGRES-SERVER> <namespace>
+deploy-and-test.bat --namespace my-namespace
 
-# Deploy to default namespace
-deploy-and-test.bat <YOUR-POSTGRES-SERVER>
+# Deploy with PVC testing enabled
+deploy-and-test.bat --enable-pvc
 
-# Example
-deploy-and-test.bat airia-postgresql-mvp my-namespace
+# Example with all options
+deploy-and-test.bat --namespace prod --server airia-postgresql-mvp --manual-tests --enable-pvc
 ```
 
+### Deployment Options:
+- `--namespace, -n <namespace>` - Kubernetes namespace (default: default)
+- `--server, -s <server>` - PostgreSQL server name (required for manual tests)
+- `--enable-pvc` - Enable persistent volume claim testing
+- `--manual-tests` - Run manual connectivity tests instead of automated tests
+- `--help, -h` - Show usage information
+
 The script will:
-1. Create namespace if it doesn't exist
-2. Deploy the ConfigMap, Secret, and test pod
-3. Wait for the pod to be ready
-4. Run connectivity tests:
-   - DNS resolution
-   - Network connectivity (port 5432)
-   - PostgreSQL connection test
-   - List databases
-   - Connect to keycloak database
+1. Build the connectivity tester Docker image if not present
+2. Create namespace if it doesn't exist
+3. Deploy the ConfigMap, Secret, Azure services secret, and test pod
+4. Wait for the pod to be ready
+5. Run either:
+   - **Automated tests** (default): Shows continuous pod logs with all test results
+   - **Manual tests** (with --manual-tests and --server): Runs specific connectivity tests:
+     - DNS resolution
+     - Network connectivity (port 5432)  
+     - PostgreSQL connection test
+     - List databases
+     - Connect to keycloak database
 
 ### Manual testing:
 ```bash
@@ -104,12 +132,93 @@ If connectivity fails, check:
    ```
 4. **Service endpoints/Private endpoints**: Ensure proper network configuration between AKS and PostgreSQL
 
+## Extended Testing with Azure Services (Optional)
+
+The test pod supports optional connectivity tests for Azure services:
+- Azure OpenAI
+- Azure Document Intelligence
+- Persistent Volume Claims (PVC)
+
+### Setup for Azure Service Tests:
+
+1. **Configure Azure services** in `azure-services-secret.yaml` (optional):
+   - For Azure OpenAI:
+     - Set `azure-openai-endpoint` (e.g., https://your-resource.openai.azure.com/)
+     - Set `azure-openai-api-key`
+     - Set `azure-openai-deployment` (e.g., gpt-35-turbo)
+   - For Azure Document Intelligence:
+     - Set `azure-docintel-endpoint` (e.g., https://your-resource.cognitiveservices.azure.com/)
+     - Set `azure-docintel-api-key`
+
+2. **Deploy with automated tests** (includes Azure service tests if configured):
+   ```bash
+   ./deploy-and-test.sh
+   ```
+
+The automated tests will:
+- Always test PostgreSQL connectivity (required)
+- Test Azure OpenAI if configured (optional)
+- Test Azure Document Intelligence if configured (optional)
+- Test Persistent Volume Claim if enabled with --enable-pvc (optional)
+- Test connectivity to external services (optional):
+  - Office 365 (login.microsoftonline.com)
+  - Google Drive (accounts.google.com)
+  - Notion (notion.so)
+  - Box (account.box.com)
+  - Dropbox (dropbox.com)
+  - ServiceNow (servicenow.com)
+  - Amazon S3 (aws.amazon.com/s3)
+  - Confluence (atlassian.com/software/confluence)
+- Continue running for manual testing after automated tests complete
+
+### Disabling External Service Tests:
+
+If you want to disable the external service connectivity tests (e.g., in restricted environments):
+
+```bash
+# Set environment variable before deployment
+kubectl set env pod/postgres-test-pod TEST_EXTERNAL_SERVICES=false -n <namespace>
+```
+
+### Testing Persistent Volume Claims (PVC):
+
+To test PVC functionality in your AKS cluster:
+
+1. **Configure storage class** in `pvc-configmap.yaml` (optional):
+   - Default uses `managed-csi` (Azure Disk CSI driver)
+   - Other options: `managed-csi-premium`, `azurefile-csi`, `azurefile-csi-premium`
+
+2. **Deploy with PVC testing enabled**:
+   ```bash
+   # Linux/macOS/WSL
+   ./deploy-and-test.sh --enable-pvc
+   
+   # Windows
+   deploy-and-test.bat --enable-pvc
+   ```
+
+This will:
+- Create a 1GB PVC using the configured storage class
+- Mount it to the pod at `/mnt/test-storage`
+- Test read/write permissions
+- Check storage capacity
+- Create a persistence marker file for validation
+
 ## Files
 
-- `postgres-test-pod.yaml` - Test pod with PostgreSQL client
+- `postgres-test-pod.yaml` - Original test pod with PostgreSQL client only
+- `postgres-test-pod-extended.yaml` - Extended test pod with Azure service tests
 - `postgres-configmap.yaml` - Database connection configuration
 - `postgres-secret.yaml` - Database password (keep secure!)
+- `azure-services-secret.yaml` - Azure service credentials (optional)
 - `deploy-and-test.sh` - Deployment and test script (Linux/macOS/WSL)
 - `deploy-and-test.bat` - Deployment and test script (Windows)
 - `cleanup.sh` - Resource cleanup script (Linux/macOS/WSL)
 - `cleanup.bat` - Resource cleanup script (Windows)
+- `Dockerfile` - Custom test container image
+- `requirements.txt` - Python dependencies
+- `test_connectivity.py` - Python script for connectivity tests
+- `build-image.sh` - Docker image build script (Linux/macOS/WSL)
+- `build-image.bat` - Docker image build script (Windows)
+- `test-pvc.yaml` - Persistent Volume Claim for storage testing
+- `pvc-configmap.yaml` - PVC storage class configuration

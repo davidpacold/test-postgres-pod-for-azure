@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-test-pod
+  labels:
+    app: postgres-test
+spec:
+  containers:
+  - name: connectivity-tester
+    image: connectivity-tester:latest
+    imagePullPolicy: IfNotPresent
+    env:
+    # PostgreSQL Configuration
+    - name: PGHOST
+      valueFrom:
+        configMapKeyRef:
+          name: postgres-config
+          key: host
+    - name: PGPORT
+      valueFrom:
+        configMapKeyRef:
+          name: postgres-config
+          key: port
+    - name: PGDATABASE
+      valueFrom:
+        configMapKeyRef:
+          name: postgres-config
+          key: database
+    - name: PGUSER
+      valueFrom:
+        configMapKeyRef:
+          name: postgres-config
+          key: username
+    - name: PGPASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: postgres-secret
+          key: password
+    
+    # Azure OpenAI Configuration (Optional)
+    - name: AZURE_OPENAI_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-openai-endpoint
+          optional: true
+    - name: AZURE_OPENAI_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-openai-api-key
+          optional: true
+    - name: AZURE_OPENAI_DEPLOYMENT
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-openai-deployment
+          optional: true
+    - name: AZURE_OPENAI_API_VERSION
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-openai-api-version
+          optional: true
+    
+    # Azure Document Intelligence Configuration (Optional)
+    - name: AZURE_DOCINTEL_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-docintel-endpoint
+          optional: true
+    - name: AZURE_DOCINTEL_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-docintel-api-key
+          optional: true
+    - name: AZURE_DOCINTEL_API_VERSION
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: azure-docintel-api-version
+          optional: true
+    
+    # PVC Test Configuration (Optional)
+    - name: TEST_PVC
+      value: "false"  # Set to "true" to enable PVC testing
+    - name: PVC_MOUNT_PATH
+      value: "/mnt/test-storage"
+    
+    volumeMounts:
+    - name: test-storage
+      mountPath: /mnt/test-storage
+    
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+  
+  volumes:
+  - name: test-storage
+    persistentVolumeClaim:
+      claimName: test-pvc
+      optional: true  # Pod will still start if PVC doesn't exist

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pvc-config
+data:
+  storage-class: "managed-csi"  # Default Azure Disk CSI driver
+  # Alternative storage classes:
+  # storage-class: "managed-csi-premium"  # Premium SSD
+  # storage-class: "azurefile-csi"       # Azure Files
+  # storage-class: "azurefile-csi-premium" # Premium Azure Files
