@@ -14,14 +14,48 @@ def log(message, level="INFO"):
 def test_postgres():
     log("Testing PostgreSQL connectivity...")
     
+    # Test primary PostgreSQL server
+    primary_result = test_postgres_server(
+        server_name="Primary PostgreSQL",
+        host=os.environ.get('PGHOST'),
+        port=os.environ.get('PGPORT', '5432'),
+        database=os.environ.get('PGDATABASE'),
+        user=os.environ.get('PGUSER'),
+        password=os.environ.get('PGPASSWORD')
+    )
+    
+    return primary_result
+
+def test_postgres_secondary():
+    log("Testing Secondary PostgreSQL connectivity...")
+    
+    # Check if secondary PostgreSQL is configured
+    secondary_host = os.environ.get('PGHOST_SECONDARY')
+    if not secondary_host:
+        log("Secondary PostgreSQL test skipped - PGHOST_SECONDARY not configured", "WARN")
+        return None
+    
+    # Test secondary PostgreSQL server
+    secondary_result = test_postgres_server(
+        server_name="Secondary PostgreSQL",
+        host=secondary_host,
+        port=os.environ.get('PGPORT_SECONDARY', '5432'),
+        database=os.environ.get('PGDATABASE_SECONDARY') or os.environ.get('PGDATABASE', 'postgres'),
+        user=os.environ.get('PGUSER_SECONDARY') or os.environ.get('PGUSER'),
+        password=os.environ.get('PGPASSWORD_SECONDARY') or os.environ.get('PGPASSWORD')
+    )
+    
+    return secondary_result
+
+def test_postgres_server(server_name, host, port, database, user, password):
+    log(f"Testing {server_name} server...")
+    
+    if not all([host, user, password]):
+        log(f"{server_name} test skipped - missing required configuration", "WARN")
+        return False
+    
     try:
-        host = os.environ.get('PGHOST')
-        port = os.environ.get('PGPORT', '5432')
-        database = os.environ.get('PGDATABASE')
-        user = os.environ.get('PGUSER')
-        password = os.environ.get('PGPASSWORD')
-        
-        log(f"Connecting to PostgreSQL at {host}:{port}/{database}")
+        log(f"Connecting to {server_name} at {host}:{port}/{database}")
         
         conn = psycopg2.connect(
             host=host,
@@ -35,10 +69,10 @@ def test_postgres():
         cursor = conn.cursor()
         cursor.execute("SELECT version();")
         version = cursor.fetchone()
-        log(f"PostgreSQL connection successful! Version: {version[0]}")
+        log(f"{server_name} connection successful! Version: {version[0]}")
         
         # List all databases
-        log("Listing available databases...")
+        log(f"Listing available databases on {server_name}...")
         cursor.execute("""
             SELECT datname, pg_size_pretty(pg_database_size(datname)) as size
             FROM pg_database 
@@ -47,31 +81,26 @@ def test_postgres():
         """)
         databases = cursor.fetchall()
         
-        log(f"Found {len(databases)} databases:")
+        log(f"Found {len(databases)} databases on {server_name}:")
         for db_name, db_size in databases:
             log(f"  - {db_name} ({db_size})")
         
         cursor.close()
         conn.close()
         
-        # Test extensions for each database
-        test_postgres_extensions()
+        # Test extensions for each database on this server
+        test_postgres_extensions_for_server(server_name, host, port, user, password)
         
         return True
         
     except Exception as e:
-        log(f"PostgreSQL connection failed: {str(e)}", "ERROR")
+        log(f"{server_name} connection failed: {str(e)}", "ERROR")
         return False
 
-def test_postgres_extensions():
-    log("Testing PostgreSQL extensions for each database...")
+def test_postgres_extensions_for_server(server_name, host, port, user, password):
+    log(f"Testing PostgreSQL extensions for {server_name}...")
     
     try:
-        host = os.environ.get('PGHOST')
-        port = os.environ.get('PGPORT', '5432')
-        user = os.environ.get('PGUSER')
-        password = os.environ.get('PGPASSWORD')
-        
         # First, get list of accessible databases
         conn = psycopg2.connect(
             host=host,
@@ -94,12 +123,12 @@ def test_postgres_extensions():
         cursor.close()
         conn.close()
         
-        log(f"Checking extensions in {len(databases)} accessible databases...")
+        log(f"Checking extensions in {len(databases)} accessible databases on {server_name}...")
         
         for db_name in databases:
             try:
-                log(f"Database: {db_name}")
-                log("-" * 40)
+                log(f"{server_name} - Database: {db_name}")
+                log("-" * 50)
                 
                 # Connect to specific database
                 db_conn = psycopg2.connect(
@@ -141,14 +170,14 @@ def test_postgres_extensions():
                     FROM pg_available_extensions
                     WHERE name NOT IN (SELECT extname FROM pg_extension)
                     ORDER BY name
-                    LIMIT 10;
+                    LIMIT 5;
                 """)
                 available = db_cursor.fetchall()
                 
                 if available:
-                    log(f"  Available extensions (showing first 10):")
+                    log(f"  Available extensions (showing first 5):")
                     for ext_name, ext_version, ext_comment in available:
-                        comment_short = ext_comment[:50] + "..." if ext_comment and len(ext_comment) > 50 else ext_comment or "No description"
+                        comment_short = ext_comment[:40] + "..." if ext_comment and len(ext_comment) > 40 else ext_comment or "No description"
                         log(f"    • {ext_name} v{ext_version} - {comment_short}")
                 
                 db_cursor.close()
@@ -157,11 +186,11 @@ def test_postgres_extensions():
                 log("")  # Empty line between databases
                 
             except Exception as db_error:
-                log(f"    Error accessing database {db_name}: {str(db_error)}", "WARN")
+                log(f"    Error accessing database {db_name} on {server_name}: {str(db_error)}", "WARN")
                 continue
         
     except Exception as e:
-        log(f"PostgreSQL extensions check failed: {str(e)}", "ERROR")
+        log(f"PostgreSQL extensions check failed for {server_name}: {str(e)}", "ERROR")
 
 def test_azure_openai():
     log("Testing Azure OpenAI connectivity...")
@@ -534,8 +563,14 @@ def main():
     results = {}
     
     # Test PostgreSQL (always required)
-    results['PostgreSQL'] = test_postgres()
+    results['Primary PostgreSQL'] = test_postgres()
     log("-" * 60)
+    
+    # Test Secondary PostgreSQL (optional)
+    result = test_postgres_secondary()
+    if result is not None:
+        results['Secondary PostgreSQL'] = result
+        log("-" * 60)
     
     # Test Azure OpenAI (optional)
     result = test_azure_openai()
@@ -596,7 +631,7 @@ def main():
             log(f"  {service}: {status_text}")
     
     # Exit with error if any required test failed
-    if not results.get('PostgreSQL', False):
+    if not results.get('Primary PostgreSQL', False):
         log("Required tests failed!", "ERROR")
         sys.exit(1)
     

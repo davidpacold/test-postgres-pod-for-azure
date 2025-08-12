@@ -117,6 +117,38 @@ spec:
           key: openai-compatible-model
           optional: true
     
+    # Secondary PostgreSQL Configuration (Optional)
+    - name: PGHOST_SECONDARY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: postgres-host-secondary
+          optional: true
+    - name: PGPORT_SECONDARY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: postgres-port-secondary
+          optional: true
+    - name: PGDATABASE_SECONDARY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: postgres-database-secondary
+          optional: true
+    - name: PGUSER_SECONDARY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: postgres-user-secondary
+          optional: true
+    - name: PGPASSWORD_SECONDARY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: postgres-password-secondary
+          optional: true
+    
     # Custom Hostname Test Configuration (Optional)
     - name: CUSTOM_HOST_1
       valueFrom:

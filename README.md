@@ -157,6 +157,12 @@ The test pod supports optional connectivity tests for Azure services:
      - Set `openai-compatible-endpoint` (e.g., https://api.openai.com, https://api.together.xyz/v1)
      - Set `openai-compatible-api-key` (optional for some self-hosted endpoints)
      - Set `openai-compatible-model` (e.g., gpt-3.5-turbo, meta-llama/Llama-2-7b-chat-hf)
+   - For Secondary PostgreSQL Server:
+     - Set `postgres-host-secondary` (e.g., replica-server.postgres.database.azure.com)
+     - Set `postgres-port-secondary` (default: 5432)
+     - Set `postgres-database-secondary` (optional, defaults to primary database)
+     - Set `postgres-user-secondary` (optional, defaults to primary user)  
+     - Set `postgres-password-secondary` (optional, defaults to primary password)
    - For Custom Hostname Testing:
      - Set `custom-host-1` through `custom-host-10` (e.g., internal-api.company.com, https://api.example.com)
      - Set `custom-host-1-name` through `custom-host-10-name` for display names (e.g., "Internal API", "My Service")
@@ -167,10 +173,13 @@ The test pod supports optional connectivity tests for Azure services:
    ```
 
 The automated tests will:
-- Always test PostgreSQL connectivity (required)
+- Always test Primary PostgreSQL connectivity (required)
   - Lists all available databases with sizes
   - Shows installed extensions for each accessible database
   - Displays available (but not installed) extensions
+- Test Secondary PostgreSQL if configured (optional)
+  - Same database and extension discovery as primary
+  - Useful for primary/replica setups or multiple database servers
 - Test Azure OpenAI if configured (optional)
 - Test Azure Document Intelligence if configured (optional)
 - Test Ollama if configured (optional)
