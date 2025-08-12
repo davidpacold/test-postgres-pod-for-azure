@@ -8,8 +8,6 @@ on:
       - 'requirements.txt' 
       - 'test_connectivity.py'
       - '.github/workflows/build-image.yml'
-  # Trigger on version tags (e.g., v1.0.0, v1.2.3)
-  push:
     tags:
       - 'v*.*.*'
 
