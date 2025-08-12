@@ -83,6 +83,40 @@ spec:
           key: azure-docintel-api-version
           optional: true
     
+    # Ollama Configuration (Optional)
+    - name: OLLAMA_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: ollama-endpoint
+          optional: true
+    - name: OLLAMA_MODEL
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: ollama-model
+          optional: true
+    
+    # OpenAI-compatible Configuration (Optional)
+    - name: OPENAI_COMPATIBLE_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: openai-compatible-endpoint
+          optional: true
+    - name: OPENAI_COMPATIBLE_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: openai-compatible-api-key
+          optional: true
+    - name: OPENAI_COMPATIBLE_MODEL
+      valueFrom:
+        secretKeyRef:
+          name: azure-services-secret
+          key: openai-compatible-model
+          optional: true
+    
     # PVC Test Configuration (Optional)
     - name: TEST_PVC
       value: "false"  # Set to "true" to enable PVC testing

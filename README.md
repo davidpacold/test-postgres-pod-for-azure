@@ -141,7 +141,7 @@ The test pod supports optional connectivity tests for Azure services:
 
 ### Setup for Azure Service Tests:
 
-1. **Configure Azure services** in `azure-services-secret.yaml` (optional):
+1. **Configure AI services** in `azure-services-secret.yaml` (optional):
    - For Azure OpenAI:
      - Set `azure-openai-endpoint` (e.g., https://your-resource.openai.azure.com/)
      - Set `azure-openai-api-key`
@@ -149,6 +149,13 @@ The test pod supports optional connectivity tests for Azure services:
    - For Azure Document Intelligence:
      - Set `azure-docintel-endpoint` (e.g., https://your-resource.cognitiveservices.azure.com/)
      - Set `azure-docintel-api-key`
+   - For Ollama:
+     - Set `ollama-endpoint` (e.g., http://your-ollama-server:11434)
+     - Set `ollama-model` (e.g., llama2, mistral, codellama)
+   - For OpenAI-compatible endpoints:
+     - Set `openai-compatible-endpoint` (e.g., https://api.openai.com, https://api.together.xyz/v1)
+     - Set `openai-compatible-api-key` (optional for some self-hosted endpoints)
+     - Set `openai-compatible-model` (e.g., gpt-3.5-turbo, meta-llama/Llama-2-7b-chat-hf)
 
 2. **Deploy with automated tests** (includes Azure service tests if configured):
    ```bash
@@ -159,6 +166,8 @@ The automated tests will:
 - Always test PostgreSQL connectivity (required)
 - Test Azure OpenAI if configured (optional)
 - Test Azure Document Intelligence if configured (optional)
+- Test Ollama if configured (optional)
+- Test OpenAI-compatible endpoints if configured (optional)
 - Test Persistent Volume Claim if enabled with --enable-pvc (optional)
 - Test connectivity to external services (optional):
   - Office 365 (login.microsoftonline.com)

@@ -175,6 +175,105 @@ def test_persistent_volume():
         log(f"PVC test failed: {str(e)}", "ERROR")
         return False
 
+def test_ollama():
+    log("Testing Ollama connectivity...")
+    
+    endpoint = os.environ.get('OLLAMA_ENDPOINT')
+    model = os.environ.get('OLLAMA_MODEL', 'llama2')
+    
+    if not endpoint:
+        log("Ollama test skipped - missing OLLAMA_ENDPOINT", "WARN")
+        return None
+    
+    try:
+        # Test Ollama API endpoint
+        url = f"{endpoint}/api/generate"
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": model,
+            "prompt": "Hello",
+            "stream": False,
+            "options": {
+                "num_predict": 5
+            }
+        }
+        
+        log(f"Testing Ollama endpoint: {endpoint} with model: {model}")
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            log("Ollama connection successful!")
+            return True
+        else:
+            log(f"Ollama connection failed - Status: {response.status_code}, Response: {response.text}", "ERROR")
+            return False
+            
+    except Exception as e:
+        log(f"Ollama connection error: {str(e)}", "ERROR")
+        return False
+
+def test_openai_compatible():
+    log("Testing OpenAI-compatible endpoint...")
+    
+    endpoint = os.environ.get('OPENAI_COMPATIBLE_ENDPOINT')
+    api_key = os.environ.get('OPENAI_COMPATIBLE_API_KEY')
+    model = os.environ.get('OPENAI_COMPATIBLE_MODEL', 'gpt-3.5-turbo')
+    
+    if not endpoint:
+        log("OpenAI-compatible test skipped - missing OPENAI_COMPATIBLE_ENDPOINT", "WARN")
+        return None
+    
+    try:
+        # Test OpenAI-compatible API endpoint
+        url = f"{endpoint}/v1/completions"
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        # Add authorization header if API key is provided
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        
+        payload = {
+            "model": model,
+            "prompt": "Hello",
+            "max_tokens": 5,
+            "temperature": 0
+        }
+        
+        log(f"Testing OpenAI-compatible endpoint: {endpoint} with model: {model}")
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            log("OpenAI-compatible connection successful!")
+            return True
+        else:
+            # Try chat completions endpoint as fallback
+            log("Trying chat completions endpoint...")
+            url = f"{endpoint}/v1/chat/completions"
+            chat_payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": "Hello"}],
+                "max_tokens": 5,
+                "temperature": 0
+            }
+            
+            response = requests.post(url, headers=headers, json=chat_payload, timeout=30)
+            
+            if response.status_code == 200:
+                log("OpenAI-compatible connection successful (chat endpoint)!")
+                return True
+            else:
+                log(f"OpenAI-compatible connection failed - Status: {response.status_code}, Response: {response.text}", "ERROR")
+                return False
+            
+    except Exception as e:
+        log(f"OpenAI-compatible connection error: {str(e)}", "ERROR")
+        return False
+
 def test_external_services():
     log("Testing connectivity to external services...")
     
@@ -247,6 +346,18 @@ def main():
     result = test_azure_document_intelligence()
     if result is not None:
         results['Azure Document Intelligence'] = result
+        log("-" * 60)
+    
+    # Test Ollama (optional)
+    result = test_ollama()
+    if result is not None:
+        results['Ollama'] = result
+        log("-" * 60)
+    
+    # Test OpenAI-compatible endpoint (optional)
+    result = test_openai_compatible()
+    if result is not None:
+        results['OpenAI-compatible'] = result
         log("-" * 60)
     
     # Test Persistent Volume Claim (optional)
