@@ -168,6 +168,9 @@ The test pod supports optional connectivity tests for Azure services:
 
 The automated tests will:
 - Always test PostgreSQL connectivity (required)
+  - Lists all available databases with sizes
+  - Shows installed extensions for each accessible database
+  - Displays available (but not installed) extensions
 - Test Azure OpenAI if configured (optional)
 - Test Azure Document Intelligence if configured (optional)
 - Test Ollama if configured (optional)

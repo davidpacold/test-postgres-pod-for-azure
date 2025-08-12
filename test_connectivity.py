@@ -37,13 +37,131 @@ def test_postgres():
         version = cursor.fetchone()
         log(f"PostgreSQL connection successful! Version: {version[0]}")
         
+        # List all databases
+        log("Listing available databases...")
+        cursor.execute("""
+            SELECT datname, pg_size_pretty(pg_database_size(datname)) as size
+            FROM pg_database 
+            WHERE datistemplate = false 
+            ORDER BY datname;
+        """)
+        databases = cursor.fetchall()
+        
+        log(f"Found {len(databases)} databases:")
+        for db_name, db_size in databases:
+            log(f"  - {db_name} ({db_size})")
+        
         cursor.close()
         conn.close()
+        
+        # Test extensions for each database
+        test_postgres_extensions()
+        
         return True
         
     except Exception as e:
         log(f"PostgreSQL connection failed: {str(e)}", "ERROR")
         return False
+
+def test_postgres_extensions():
+    log("Testing PostgreSQL extensions for each database...")
+    
+    try:
+        host = os.environ.get('PGHOST')
+        port = os.environ.get('PGPORT', '5432')
+        user = os.environ.get('PGUSER')
+        password = os.environ.get('PGPASSWORD')
+        
+        # First, get list of accessible databases
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            database='postgres',  # Connect to default postgres database
+            user=user,
+            password=password,
+            connect_timeout=10
+        )
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT datname 
+            FROM pg_database 
+            WHERE datistemplate = false 
+            AND has_database_privilege(current_user, datname, 'CONNECT')
+            ORDER BY datname;
+        """)
+        databases = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        
+        log(f"Checking extensions in {len(databases)} accessible databases...")
+        
+        for db_name in databases:
+            try:
+                log(f"Database: {db_name}")
+                log("-" * 40)
+                
+                # Connect to specific database
+                db_conn = psycopg2.connect(
+                    host=host,
+                    port=port,
+                    database=db_name,
+                    user=user,
+                    password=password,
+                    connect_timeout=10
+                )
+                
+                db_cursor = db_conn.cursor()
+                
+                # Get installed extensions
+                db_cursor.execute("""
+                    SELECT 
+                        extname as extension_name,
+                        extversion as version,
+                        nspname as schema
+                    FROM pg_extension e
+                    JOIN pg_namespace n ON n.oid = e.extnamespace
+                    ORDER BY extname;
+                """)
+                extensions = db_cursor.fetchall()
+                
+                if extensions:
+                    log(f"  Extensions ({len(extensions)} installed):")
+                    for ext_name, ext_version, ext_schema in extensions:
+                        log(f"    • {ext_name} v{ext_version} (schema: {ext_schema})")
+                else:
+                    log("    No extensions installed")
+                
+                # Get available (but not installed) extensions
+                db_cursor.execute("""
+                    SELECT 
+                        name,
+                        default_version,
+                        comment
+                    FROM pg_available_extensions
+                    WHERE name NOT IN (SELECT extname FROM pg_extension)
+                    ORDER BY name
+                    LIMIT 10;
+                """)
+                available = db_cursor.fetchall()
+                
+                if available:
+                    log(f"  Available extensions (showing first 10):")
+                    for ext_name, ext_version, ext_comment in available:
+                        comment_short = ext_comment[:50] + "..." if ext_comment and len(ext_comment) > 50 else ext_comment or "No description"
+                        log(f"    • {ext_name} v{ext_version} - {comment_short}")
+                
+                db_cursor.close()
+                db_conn.close()
+                
+                log("")  # Empty line between databases
+                
+            except Exception as db_error:
+                log(f"    Error accessing database {db_name}: {str(db_error)}", "WARN")
+                continue
+        
+    except Exception as e:
+        log(f"PostgreSQL extensions check failed: {str(e)}", "ERROR")
 
 def test_azure_openai():
     log("Testing Azure OpenAI connectivity...")
